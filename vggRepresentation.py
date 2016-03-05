@@ -64,14 +64,14 @@ def getRepresentation(imageDataset):
     f.close()
 
     print("weights loaded")
-    print("compiling model")
+    print("compiling image model")
 
     imageModel.add(Reshape(dims=(512, 49)))
 
     sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
     imageModel.compile(optimizer=sgd, loss='categorical_crossentropy')
 
-    print("model compiled")
+    print("image model compiled")
     print("calculating image representation")
 
     imageRep = imageModel.predict(imageDataset.dataset, verbose=True)

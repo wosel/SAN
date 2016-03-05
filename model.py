@@ -10,13 +10,14 @@ import theano.tensor
 
 import data_loader
 from CustomDense import CustomDense
-
+from CustomRepeatVector import CustomRepeatVector
+from vggRepresentation import getRepresentation
 
 '''
     Right now it throws a very cryptic optimization error unfortunately. I suspect a problem with the Custom Dense layer
 '''
 
-'''
+
 #This is the data loader call
 # right now it loads the DAQUAR dataset, but is memory inefficient.
 # also a pairing of question <-> image is still missing
@@ -30,89 +31,51 @@ from CustomDense import CustomDense
                           imLimit=100,
                           qLimit=100
                           )
-'''
-
-#VGG-16 net, starts with 224x224 and ends with the last max-pooling layer
-#last max-pooling layer has 49 (7x7) image regions with 512 features each
-imageModel = Sequential()
-imageModel.add(ZeroPadding2D((1, 1), input_shape=(3, 224, 224)))
-imageModel.add(Convolution2D(64, 3, 3, activation='relu'))
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(64, 3, 3, activation='relu'))
-imageModel.add(MaxPooling2D((2, 2), strides=(2, 2)))
-
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(128, 3, 3, activation='relu'))
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(128, 3, 3, activation='relu'))
-imageModel.add(MaxPooling2D((2, 2), strides=(2, 2)))
-
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(256, 3, 3, activation='relu'))
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(256, 3, 3, activation='relu'))
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(256, 3, 3, activation='relu'))
-imageModel.add(MaxPooling2D((2, 2), strides=(2, 2)))
-
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(512, 3, 3, activation='relu'))
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(512, 3, 3, activation='relu'))
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(512, 3, 3, activation='relu'))
-imageModel.add(MaxPooling2D((2, 2), strides=(2, 2)))
-
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(512, 3, 3, activation='relu'))
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(512, 3, 3, activation='relu'))
-imageModel.add(ZeroPadding2D((1, 1)))
-imageModel.add(Convolution2D(512, 3, 3, activation='relu'))
-imageModel.add(MaxPooling2D((2, 2), strides=(2, 2)))
-#end of VGGnet
-
-# reshape to matrix num_featurex x num_regions (was 512x7x7)
-imageModel.add(Reshape(dims=(512, 49)))
-
-# custom layer - weight matrix for a matrix (keras has Dense for 2D only
-imageModel.add(CustomDense(output_dim=(512, 512), activation='linear'))
-
-dummyDictSize = 1000
-dummyQuestionLength = 100
-
-#language model: embedding, LSTM
-languageModel = Sequential()
-languageModel.add(Embedding(input_dim=dummyDictSize, output_dim=256, input_length=dummyQuestionLength))
-languageModel.add(LSTM(output_dim=512, activation='sigmoid', inner_activation='hard_sigmoid'))
-languageModel.add(Dropout(0.5))
-# SAN specified W_QA
-languageModel.add(Dense(512, activation='linear'))
-
-#to make 'sum' possible in merge
-languageModel.add(RepeatVector(512))
-
-#end of language model
 
 
 
-attentionModelP = Sequential()
-attentionModelP.add(Merge([imageModel, languageModel], mode='sum'))
-attentionModelP.add(CustomDense(output_dim=(1,512), activation='softmax'))
+import sys
+sys.setrecursionlimit(10000)
+
+#m
+numRegions = 49
+
+#d
+imageRepDimension = 512
+
+#k = d (how else would you add  u = v_i~ + v_q ???
+LSTMDimension = imageRepDimension
+
+dictSize = trainSet.dictSize
+queryLen = trainSet.qLength
+
+model = Graph()
+#LSTM
+model.add_input(name='langInput', input_shape=(queryLen,), dtype=int)
+model.add_node(Embedding(dictSize, LSTMDimension, input_length=queryLen), name='embed', input='langInput')
+model.add_node(LSTM(output_dim=LSTMDimension, activation='sigmoid', inner_activation='hard_sigmoid'), name='lstm', input='embed')
+#split output of LSTM after this dropout
+model.add_node(Dropout(0.5), name='dropout', input='lstm')
+
+#dense is w_qa from paper. custom repeat vector is repeat & transpose to facilitate matrix-vector addition
+model.add_node(Dense(LSTMDimension), name='dense', input='dropout')
+model.add_node(CustomRepeatVector(numRegions), name='repeatedLangOutput', input='dense')
 
 
-attentionModelV = Sequential()
-attentionModelV.add(Merge([imageModel, attentionModelP], mode='dot', dot_axes=[(1,), (2,)]))
-
-attentionModelV.compile(loss='categorical_crossentropy', optimizer='sgd')
-
-
-#this needs figuring out - language model has to somehow "split" the language model
-#attentionModelU = Sequential()
-#attentionModelU.add(Merge([attentionModelV, languageModel], mode='sum'))
-
-#print("compiling model")
-#attentionModelU.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+#image input. Custom dense is w_ia from paper
+model.add_input(name='imInput', input_shape=(imageRepDimension, numRegions), dtype='float')
+model.add_node(CustomDense(output_dim=(LSTMDimension, numRegions)), name='imDense', input='imInput')
 
 
-# model.add_input(name='input_text', input_shape=(trainSet.)
+#combination of image and lstm in one layer of attention network
+#  hA, pI, vI~ and u correspond to paper. CustomDense is w_p from paper (bias unit missing atm)
+model.add_node(Activation('tanh'), inputs=['imDense', 'repeatedLangOutput'], merge_mode='sum', name='hA')
+model.add_node(CustomDense(output_dim=(1, numRegions)), input='hA', name='preActivationPI')
+model.add_node(Reshape(dims=(numRegions,)), input='preActivationPI', name='reshapedPAPI')
+model.add_node(Activation('softmax'), input='reshapedPAPI', name='pI')
+model.add_node(Reshape(dims=(numRegions, 1)), input='pI', name='reshapedPI')
+model.add_node(Activation('linear'), inputs=['imInput', 'reshapedPI'], merge_mode='dot', dot_axes=([2], [1]), name='vITilde')
+model.add_node(Reshape(dims=(imageRepDimension,)), input='vITilde', name='reshapedVIT')
+model.add_output(name='u', inputs=['reshapedVIT', 'lstm'], merge_mode='sum')
+
+model.compile(loss={'u': 'categorical_crossentropy'}, optimizer='sgd')

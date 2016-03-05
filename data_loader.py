@@ -1,6 +1,7 @@
 import pandas as pd;
 import numpy as np;
 import scipy.ndimage as spi
+from scipy.misc import imresize
 from scipy.sparse import csc_matrix, csr_matrix
 import re
 import sys
@@ -105,18 +106,24 @@ def fillOneHot(qList, fullWordSet, maxQL, maxAL):
 def loadImages(folder, imLimit=-1):
     print("loading from " + folder)
     images = [f for f in listdir(folder) if isfile(join(folder, f))]
-    imageDataset = np.empty([len(images), 425, 560, 3])
+    imCt = len(images)
+    if (imLimit > 0):
+        imCt = imLimit
+
+    imageDataset = np.empty([imCt, 3, 224, 224])
     ct = 0
     # this is sort of stupid and takes about 6GB of RAM, but here we load the whole image dataset into memory
     for imName in images:
         imNameMod = re.sub('image', '', imName)
         imNameMod= re.sub(r'\.png', '', imNameMod)
         i = int(imNameMod)-1
-        imageDataset[i, :, :, :] = spi.imread(folder + '/' + imName)
+        if (i >= imCt):
+            continue
+        imageDataset[i, :, :, :] = np.rollaxis(imresize(spi.imread(folder + '/' + imName), size=(224, 224, 3), interp='bilinear'), 2, 0)
         ct += 1
         if (ct % 50 == 0):
             print("loaded " + str(ct) + " images so far ")
-        if (imLimit > 0 and ct > imLimit):
+        if (ct > imCt):
             break
     return imageDataset;
 
