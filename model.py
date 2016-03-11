@@ -25,7 +25,7 @@ sys.setrecursionlimit(10000)
 # also a pairing of question <-> image is still missing
 
 if (len(sys.argv) < 2):
-	sys.exit("specify ini file of dataset as first argument")
+    sys.exit("specify ini file of dataset as first argument")
 
 datasetIniFile = sys.argv[1]
 parser = ConfigParser()
@@ -41,7 +41,7 @@ print(qFolder)
 
 [images, trainSet, testSet] = \
     data_loader.load_both(
-													qFolder=qFolder,
+                          qFolder=qFolder,
                           qFullFile=qFullFile,
                           qTrainFile=qTrainFile,
                           qTestFile=qTestFile,
@@ -50,14 +50,14 @@ print(qFolder)
                           qLimit=512
                           )
 
-print(trainSet.qMatrix[3, :])
-print(trainSet.iMatrix[0, :, :, :])
-print(trainSet.iMatrix[127	, :, :, :])
+#print(trainSet.qMatrix[3, :])
+#print(trainSet.iMatrix[0, :, :, :])
+#print(trainSet.iMatrix[127	, :, :, :])
 
 print("getting vgg repres")
 trainSet.vggIMatrix = getRepresentation(trainSet.iMatrix)
 
-sys.exit("breakpoint")
+#sys.exit("breakpoint")
 
 
 #m
@@ -103,6 +103,11 @@ model.add_node(Reshape(dims=(numRegions, 1)), input='pI', name='reshapedPI')
 
 model.add_node(Activation('linear'), inputs=['imInput', 'reshapedPI'], merge_mode='dot', dot_axes=([2], [1]), name='vITilde')
 model.add_node(Reshape(dims=(imageRepDimension,)), input='vITilde', name='reshapedVIT')
-model.add_output(name='u', inputs=['reshapedVIT', 'lstm'], merge_mode='sum')
+model.add_node(Activation('linear'), name='u', inputs=['reshapedVIT', 'lstm'], merge_mode='sum')
+model.add_node(Dense(dictSize), name='Wu', input='u')
+model.add_node(Activation('softmax'), name='pans', input='Wu')
+model.add_output(name='output', input='pans')
 
-model.compile(loss={'u': 'categorical_crossentropy'}, optimizer='sgd')
+model.compile(loss={'output': 'categorical_crossentropy'}, optimizer='sgd')
+
+model.fit({'imInput': trainSet.vggImatrix, 'langInput': trainSet.qMatrix, 'output': trainSete.aMatrix})
