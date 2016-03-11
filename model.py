@@ -7,35 +7,56 @@ from keras.optimizers import SGD
 from theano import function
 import theano.tensor
 
+from ConfigParser import ConfigParser
 
 import data_loader
 from CustomDense import CustomDense
 from CustomRepeatVector import CustomRepeatVector
 from vggRepresentation import getRepresentation
 
-'''
-    Right now it throws a very cryptic optimization error unfortunately. I suspect a problem with the Custom Dense layer
-'''
 
+import sys
+sys.setrecursionlimit(10000)
 
 #This is the data loader call
 # right now it loads the DAQUAR dataset, but is memory inefficient.
 # also a pairing of question <-> image is still missing
 
+if (len(sys.argv) < 2):
+	sys.exit("specify ini file of dataset as first argument")
+
+datasetIniFile = sys.argv[1]
+parser = ConfigParser()
+parser.readfp(open(datasetIniFile))
+
+qFolder = parser.get('dataset', 'qFolder')
+qFullFile = parser.get('dataset', 'qFullFile')
+qTrainFile = parser.get('dataset', 'qTrainFile')
+qTestFile = parser.get('dataset', 'qTestFile')
+iFolder = parser.get('dataset', 'iFolder')
+print(qFolder)
+
+
 [images, trainSet, testSet] = \
-    data_loader.load_both(qFolder='C:/daquar',
-                          qFullFile='qa.37.raw.txt',
-                          qTrainFile='qa.37.raw.train.txt',
-                          qTestFile='qa.37.raw.reduced.test.txt',
-                          iFolder='C:/daquar/nyu_depth_images',
-                          imLimit=100,
-                          qLimit=100
+    data_loader.load_both(
+													qFolder=qFolder,
+                          qFullFile=qFullFile,
+                          qTrainFile=qTrainFile,
+                          qTestFile=qTestFile,
+                          iFolder=iFolder,
+                          imLimit=-1,
+                          qLimit=512
                           )
 
+print(trainSet.qMatrix[3, :])
+print(trainSet.iMatrix[0, :, :, :])
+print(trainSet.iMatrix[127	, :, :, :])
 
+print("getting vgg repres")
+trainSet.vggIMatrix = getRepresentation(trainSet.iMatrix)
 
-import sys
-sys.setrecursionlimit(10000)
+sys.exit("breakpoint")
+
 
 #m
 numRegions = 49
@@ -48,6 +69,9 @@ LSTMDimension = imageRepDimension
 
 dictSize = trainSet.dictSize
 queryLen = trainSet.qLength
+
+print 
+
 
 model = Graph()
 #LSTM
@@ -74,6 +98,7 @@ model.add_node(CustomDense(output_dim=(1, numRegions)), input='hA', name='preAct
 model.add_node(Reshape(dims=(numRegions,)), input='preActivationPI', name='reshapedPAPI')
 model.add_node(Activation('softmax'), input='reshapedPAPI', name='pI')
 model.add_node(Reshape(dims=(numRegions, 1)), input='pI', name='reshapedPI')
+
 model.add_node(Activation('linear'), inputs=['imInput', 'reshapedPI'], merge_mode='dot', dot_axes=([2], [1]), name='vITilde')
 model.add_node(Reshape(dims=(imageRepDimension,)), input='vITilde', name='reshapedVIT')
 model.add_output(name='u', inputs=['reshapedVIT', 'lstm'], merge_mode='sum')
