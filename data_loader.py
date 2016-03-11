@@ -74,7 +74,34 @@ def loadQuestions(filename, qLimit=-1):
     questionList.reverse()
     return [questionList, wordSet, maxQuestionLen, maxAnswerLen]
 
+def fillQs(qList, fullWordSet, maxQL, maxAL):
 
+    fullWordDict = {}
+    i = 0;
+    for w in fullWordSet:
+        fullWordDict[w] = i
+        i+=1;
+    
+
+
+    for q in qList:
+        if (q.qID % 100 == 0): print(q.qID)
+        q.QIdxList = []
+        q.AIdxList = []
+        pos = 0
+        for w in q.question:
+            id = fullWordDict[w]
+            q.QIdxList += [id]
+            #q.oneHotQuestion[id, pos] = 2.
+            #pos += 1
+        pos = 0
+        for w in q.answer:
+            id = fullWordDict[w]
+            q.AIdxList += [id]
+            #q.oneHotAnswer[id, pos] = 1.
+            #pos += 1
+    return qList
+'''
 def fillOneHot(qList, fullWordSet, maxQL, maxAL):
 
     fullWordDict = {}
@@ -101,7 +128,32 @@ def fillOneHot(qList, fullWordSet, maxQL, maxAL):
             pos += 1
     return qList
 
+'''
 
+
+def buildQMatrix(qList, maxQL):
+  
+  qMatrix = np.zeros((len(qList), maxQL))
+  print(qMatrix.shape)
+  for q in qList:
+#    qMatrix[q.qID, :] = np.zeros((maxQL,))
+    qMatrix[q.qID, 0:len(q.QIdxList)] = q.QIdxList  
+  return qMatrix
+
+def buildIMatrix(qList, iFolder):
+  iMatrix = np.zeros((len(qList), 3, 224, 224))
+  for q in qList:
+    if (q.qID % 50 == 0):
+      print "loaded images for " + str(q.qID) " questions"
+    #iMatrix[q.qID, :, :, :] = images[q.imageID-1, :, :, :]
+    
+    iMatrix[q.qID, :, :, :] = loadImage(iFolder, q.imageID)
+  return iMatrix
+  
+def loadImage(folder, imageID):
+  imName = "image" + str(imageID) + ".png"
+  image =  np.rollaxis(imresize(spi.imread(folder + '/' + imName), size=(224, 224, 3), interp='bilinear'), 2, 0)
+  return image
 
 def loadImages(folder, imLimit=-1):
     print("loading from " + folder)
@@ -131,33 +183,37 @@ def loadImages(folder, imLimit=-1):
 
 def load_both(qFolder, qFullFile, qTrainFile, qTestFile, iFolder, imLimit=-1, qLimit=-1 ):
 
-    imageDS = loadImages(iFolder, imLimit)
+    #imageDS = loadImages(iFolder, imLimit)
 
     imageSet = imageDataset('allImages')
-    imageSet.dataset = imageDS
-    imageSet.count = imageDS.shape[0]
-    imageSet.imageShape = (imageDS.shape[1], imageDS.shape[2], imageDS.shape[3])
+    #imageSet.dataset = imageDS
+    #imageSet.count = imageDS.shape[0]
+    #imageSet.imageShape = (imageDS.shape[1], imageDS.shape[2], imageDS.shape[3])
 
     [_, fullWordSet, maxQL, maxAL] = loadQuestions(qFolder + "/" + qFullFile)
 
     [trainQList, _, _, _] = loadQuestions(qFolder + "/" + qTrainFile, qLimit)
     [testQList, _, _, _] = loadQuestions(qFolder + "/" + qTestFile, qLimit)
 
-    trainQList = fillOneHot(trainQList, fullWordSet, maxQL, maxAL)
+    trainQList = fillQs(trainQList, fullWordSet, maxQL, maxAL)
     trainSet = questionDataset('trainSet')
     trainSet.questionList = trainQList;
     trainSet.count = len(trainQList)
     trainSet.dictSize = len(fullWordSet)
     trainSet.qLength = maxQL
     trainSet.aLength = maxAL
+    trainSet.qMatrix = buildQMatrix(trainQList, maxQL)
+    trainSet.iMatrix = buildIMatrix(trainQList, iFolder)
     
-    testQList = fillOneHot(testQList, fullWordSet, maxQL, maxAL)
+    testQList = fillQs(testQList, fullWordSet, maxQL, maxAL)
     testSet = questionDataset('testSet')
     testSet.questionList = testQList;
     testSet.count = len(testQList)
     testSet.dictSize = len(fullWordSet)
     testSet.qLength = maxQL
     testSet.aLength = maxAL
+    testSet.qMatrix = buildQMatrix(testQList, maxQL)
+    testSet.iMatrix = buildIMatrix(testQList, iFolder)
 
     return [imageSet, trainSet, testSet]
 
