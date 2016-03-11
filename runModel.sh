@@ -24,5 +24,5 @@ TF="device=$device,optimizer=fast_compile"
 
 export THEANO_FLAGS=$TF
 
-python model.py
+python model.py daquar.mpi.ini
 
