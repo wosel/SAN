@@ -48,7 +48,7 @@ def loadQuestions(filename, qLimit=-1):
     maxAnswerLen = -1
     maxQuestionLen = -1
     for line in open(filename, 'r'):
-        if (qLimit > 0 and len(questionList) > qLimit):
+        if (qLimit > 0 and len(questionList) >= qLimit):
             break
         allWords = line.split()
         for w in allWords:
@@ -144,7 +144,7 @@ def buildIMatrix(qList, iFolder):
   iMatrix = np.zeros((len(qList), 3, 224, 224))
   for q in qList:
     if (q.qID % 50 == 0):
-      print "loaded images for " + str(q.qID) " questions"
+      print "loaded images for " + str(q.qID) + " questions"
     #iMatrix[q.qID, :, :, :] = images[q.imageID-1, :, :, :]
     
     iMatrix[q.qID, :, :, :] = loadImage(iFolder, q.imageID)
