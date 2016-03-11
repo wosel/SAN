@@ -4,8 +4,7 @@ from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2
 from keras.optimizers import SGD
 import numpy as np
 
-
-def getRepresentation(imageDataset):
+def getRepresentation(imageMatrix):
 
 
     imageModel = Sequential()
@@ -48,7 +47,7 @@ def getRepresentation(imageDataset):
 
     # reshape to matrix num_features x num_regions (was 512x7x7)
 
-    VGGWeightsPath='C:/DP/vgg/vgg16_weights.h5'
+    VGGWeightsPath='/home/jakub/vgg/vgg16_weights.h5'
 
     print("loading weights")
 
@@ -74,8 +73,8 @@ def getRepresentation(imageDataset):
     print("image model compiled")
     print("calculating image representation")
 
-    imageRep = imageModel.predict(imageDataset.dataset, verbose=True)
-    imageDataset.regionRep = imageRep
+    imageRep = imageModel.predict(imageMatrix, verbose=True, batch_size=32)	
+    #imageDataset.regionRep = imageRep
     return imageRep
 
 
