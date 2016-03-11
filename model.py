@@ -7,6 +7,8 @@ from keras.optimizers import SGD
 from theano import function
 import theano.tensor
 
+print(theano.config.device)
+
 
 import data_loader
 from CustomDense import CustomDense
