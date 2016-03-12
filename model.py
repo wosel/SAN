@@ -37,6 +37,7 @@ qFullFile = parser.get('dataset', 'qFullFile')
 qTrainFile = parser.get('dataset', 'qTrainFile')
 qTestFile = parser.get('dataset', 'qTestFile')
 iFolder = parser.get('dataset', 'iFolder')
+iMatrix = parser.get('dataset', 'iMatrix')
 print(qFolder)
 
 
@@ -58,7 +59,7 @@ print(qFolder)
 print("getting vgg repres")
 #trainSet.vggIMatrix = getRepresentation(trainSet.iMatrix)
 
-trainSet.vggIMatrix = np.load('vggIMatrix.npy')
+trainSet.vggIMatrix = np.load(iMatrix)
 
 #sys.exit("breakpoint")
 
