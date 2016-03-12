@@ -9,7 +9,7 @@ import theano.tensor
 
 print(theano.config.device)
 
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 
 import data_loader
 from CustomDense import CustomDense
@@ -56,11 +56,11 @@ print(qFolder)
 #print(trainSet.iMatrix[127	, :, :, :])
 
 print("getting vgg repres")
-trainSet.vggIMatrix = getRepresentation(trainSet.iMatrix)
+#trainSet.vggIMatrix = getRepresentation(trainSet.iMatrix)
 
-np.save('vggIMatrix.npy', trainSet.vggIMatrix)
+trainSet.vggIMatrix = np.load('vggIMatrix.npy')
 
-sys.exit("breakpoint")
+#sys.exit("breakpoint")
 
 
 #m
@@ -75,11 +75,10 @@ LSTMDimension = imageRepDimension
 dictSize = trainSet.dictSize
 queryLen = trainSet.qLength
 
-print 
-
 
 model = Graph()
 #LSTM
+
 model.add_input(name='langInput', input_shape=(queryLen,), dtype=int)
 model.add_node(Embedding(dictSize, LSTMDimension, input_length=queryLen), name='embed', input='langInput')
 model.add_node(LSTM(output_dim=LSTMDimension, activation='sigmoid', inner_activation='hard_sigmoid'), name='lstm', input='embed')
@@ -111,6 +110,18 @@ model.add_node(Dense(dictSize), name='Wu', input='u')
 model.add_node(Activation('softmax'), name='pans', input='Wu')
 model.add_output(name='output', input='pans')
 
+print("compiling full model")
+
 model.compile(loss={'output': 'categorical_crossentropy'}, optimizer='sgd')
 
-model.fit({'imInput': trainSet.vggImatrix, 'langInput': trainSet.qMatrix, 'output': trainSete.aMatrix})
+print("fit started")
+
+print(trainSet.vggIMatrix.shape)
+print(trainSet.qMatrix.shape)
+
+model.fit({'imInput': trainSet.vggIMatrix, 'langInput': trainSet.qMatrix, 'output': trainSet.aMatrix}, nb_epoch=20)
+
+json_string = model.to_json()
+open('model.json', 'w').write(json_string)
+model.save_weights('test_weights.h5', overwrite=True)
+
