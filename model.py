@@ -41,7 +41,7 @@ iMatrix = parser.get('dataset', 'iMatrix')
 print(qFolder)
 
 
-[images, trainSet, testSet] = \
+[images, trainSet, testSet, testRevDict] = \
     data_loader.load_both(
                           qFolder=qFolder,
                           qFullFile=qFullFile,
