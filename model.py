@@ -16,6 +16,7 @@ from CustomDense import CustomDense
 from CustomRepeatVector import CustomRepeatVector
 from vggRepresentation import getRepresentation
 
+import numpy as np;
 
 import sys
 sys.setrecursionlimit(10000)
@@ -47,7 +48,7 @@ print(qFolder)
                           qTestFile=qTestFile,
                           iFolder=iFolder,
                           imLimit=-1,
-                          qLimit=512
+                          qLimit=-1
                           )
 
 #print(trainSet.qMatrix[3, :])
@@ -57,7 +58,9 @@ print(qFolder)
 print("getting vgg repres")
 trainSet.vggIMatrix = getRepresentation(trainSet.iMatrix)
 
-#sys.exit("breakpoint")
+np.save('vggIMatrix.npy', trainSet.vggIMatrix)
+
+sys.exit("breakpoint")
 
 
 #m
