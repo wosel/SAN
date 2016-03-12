@@ -25,7 +25,7 @@ class CustomRepeatVector(Layer):
         Repeat input n times.
 
         Dimensions of input are assumed to be (nb_samples, dim).
-        Return tensor of shape (nb_samples, n, dim).
+        Return tensor of shape (nb_samples, dim, n).
     '''
     def __init__(self, n, **kwargs):
         super(CustomRepeatVector, self).__init__(**kwargs)
