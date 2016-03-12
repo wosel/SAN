@@ -47,13 +47,17 @@ def loadQuestions(filename, qLimit=-1):
     wordSet = set()
     maxAnswerLen = -1
     maxQuestionLen = -1
+    wordSet.add('?')
     for line in open(filename, 'r'):
         if (qLimit > 0 and len(questionList) >= qLimit):
             break
         allWords = line.split()
-        for w in allWords:
-            wordSet.add(w)
+        #for w in allWords:
+         #   wordSet.add(w)
         if(allWords[-1]) != '?': # this is an answer
+            for w in range(len(allWords)):
+                wordSet.add(allWords[w])
+
             tmpAnswer = allWords
 
             question = qa(qID=qID, wordList=tmpQuestion, answerList=tmpAnswer, imageID=tmpImgID)
@@ -64,6 +68,9 @@ def loadQuestions(filename, qLimit=-1):
         else:
             qID += 1
             tmpQuestion = allWords[:-4]
+            for w in range(len(allWords)-4):
+                wordSet.add(allWords[w])
+
             tmpQuestion = tmpQuestion + ['?']
 
             imString = allWords[-2]
@@ -77,9 +84,11 @@ def loadQuestions(filename, qLimit=-1):
 def fillQs(qList, fullWordSet, maxQL, maxAL):
 
     fullWordDict = {}
+    fullReverseDict = {}
     i = 0;
     for w in fullWordSet:
         fullWordDict[w] = i
+        fullReverseDict[i] = w
         i+=1;
     
 
@@ -102,7 +111,7 @@ def fillQs(qList, fullWordSet, maxQL, maxAL):
             q.oneHotAnswer[id, pos] = 1.
             pos += 1
 
-    return qList
+    return [qList, fullReverseDict]
 '''
 def fillOneHot(qList, fullWordSet, maxQL, maxAL):
 
@@ -205,7 +214,7 @@ def load_both(qFolder, qFullFile, qTrainFile, qTestFile, iFolder, imLimit=-1, qL
     [trainQList, _, _, _] = loadQuestions(qFolder + "/" + qTrainFile, qLimit)
     [testQList, _, _, _] = loadQuestions(qFolder + "/" + qTestFile, qLimit)
 
-    trainQList = fillQs(trainQList, fullWordSet, maxQL, maxAL)
+    [trainQList, trainRevDict] = fillQs(trainQList, fullWordSet, maxQL, maxAL)
     trainSet = questionDataset('trainSet')
     trainSet.questionList = trainQList;
     trainSet.count = len(trainQList)
@@ -217,7 +226,7 @@ def load_both(qFolder, qFullFile, qTrainFile, qTestFile, iFolder, imLimit=-1, qL
     
     trainSet.iMatrix = buildIMatrix(trainQList, iFolder)
     
-    testQList = fillQs(testQList, fullWordSet, maxQL, maxAL)
+    [testQList, testRevDict] = fillQs(testQList, fullWordSet, maxQL, maxAL)
     testSet = questionDataset('testSet')
     testSet.questionList = testQList;
     testSet.count = len(testQList)
@@ -228,5 +237,5 @@ def load_both(qFolder, qFullFile, qTrainFile, qTestFile, iFolder, imLimit=-1, qL
     testSet.iMatrix = buildIMatrix(testQList, iFolder)
     testSet.aMatrix = buildAMatrix(testQList, testSet.dictSize, maxAL)
 
-    return [imageSet, trainSet, testSet]
+    return [imageSet, trainSet, testSet, testRevDict]
 
