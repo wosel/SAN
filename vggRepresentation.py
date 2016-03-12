@@ -73,7 +73,7 @@ def getRepresentation(imageMatrix):
     print("image model compiled")
     print("calculating image representation")
 
-    imageRep = imageModel.predict(imageMatrix, verbose=True, batch_size=32)	
+    imageRep = imageModel.predict(imageMatrix, verbose=True, batch_size=32)
     #imageDataset.regionRep = imageRep
     return imageRep
 
