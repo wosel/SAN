@@ -7,11 +7,19 @@ import numpy as np
 from collections import OrderedDict
 import copy
 
+'''
+    I do not wish to figure out how to do theano tensordot with tensorflow
+    so theano only atm.
+'''
+
+from theano import tensor
 
 from keras import backend as K
 from keras import activations, initializations, regularizers, constraints
 from keras.layers.core import Layer
 from keras.regularizers import ActivityRegularizer
+
+
 
 import marshal
 import types
@@ -20,7 +28,7 @@ import sys
 
 class CustomDense(Layer):
     '''
-        Just your regular fully connected NN layer.
+        Fully connected layer, accepts 2Dmatrix shaped inputs, no bias
     '''
     input_ndim = 3
 
@@ -49,8 +57,8 @@ class CustomDense(Layer):
 
     def build(self):
         input_dim = (self.input_shape[1], self.input_shape[2])
+        self.W = self.init((self.output_dim[0], input_dim[0]))
 
-        self.W = self.init((input_dim[1], self.output_dim[1]))
         #self.b = K.zeros((self.output_dim,))
 
         self.params = [self.W]
@@ -78,7 +86,8 @@ class CustomDense(Layer):
 
     def get_output(self, train=False):
         X = self.get_input(train)
-        output = self.activation(K.dot(X, self.W))
+
+        output = self.activation(K.dot(X.dimshuffle(0, 2, 1), self.W.dimshuffle(1, 0)).dimshuffle(0, 2, 1))
         return output
 
     def get_config(self):
