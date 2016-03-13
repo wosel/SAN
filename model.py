@@ -53,7 +53,7 @@ print(qFolder)
                           )
 
 #print(trainSet.qMatrix[3, :])
-#print(trainSet.iMatrix[0, :, :, :])
+#print(trainSet.iMatrix[1, :, :, :])
 #print(trainSet.iMatrix[127	, :, :, :])
 
 print("getting vgg repres")
@@ -92,13 +92,17 @@ model.add_node(CustomRepeatVector(numRegions), name='repeatedLangOutput', input=
 
 
 #image input. Custom dense is w_ia from paper
+
 model.add_input(name='imInput', input_shape=(imageRepDimension, numRegions), dtype='float')
 model.add_node(CustomDense(output_dim=(LSTMDimension, numRegions)), name='imDense', input='imInput')
 
 
 #combination of image and lstm in one layer of attention network
 #  hA, pI, vI~ and u correspond to paper. CustomDense is w_p from paper (bias unit missing atm)
+
 model.add_node(Activation('tanh'), inputs=['imDense', 'repeatedLangOutput'], merge_mode='sum', name='hA')
+#LANG ONLY MODEL
+#model.add_node(Activation('tanh'), input='repeatedLangOutput', name='hA')
 model.add_node(CustomDense(output_dim=(1, numRegions)), input='hA', name='preActivationPI')
 model.add_node(Reshape(dims=(numRegions,)), input='preActivationPI', name='reshapedPAPI')
 model.add_node(Activation('softmax'), input='reshapedPAPI', name='pI')
@@ -107,21 +111,31 @@ model.add_node(Reshape(dims=(numRegions, 1)), input='pI', name='reshapedPI')
 model.add_node(Activation('linear'), inputs=['imInput', 'reshapedPI'], merge_mode='dot', dot_axes=([2], [1]), name='vITilde')
 model.add_node(Reshape(dims=(imageRepDimension,)), input='vITilde', name='reshapedVIT')
 model.add_node(Activation('linear'), name='u', inputs=['reshapedVIT', 'lstm'], merge_mode='sum')
+#LANG ONLY MODEL
+#model.add_node(Activation('linear'), name='u', input='lstm')
 model.add_node(Dense(dictSize), name='Wu', input='u')
 model.add_node(Activation('softmax'), name='pans', input='Wu')
 model.add_output(name='output', input='pans')
 
 print("compiling full model")
 
-model.compile(loss={'output': 'categorical_crossentropy'}, optimizer='sgd')
+sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+model.compile(loss={'output': 'categorical_crossentropy'}, optimizer=sgd)
 
 print("fit started")
 
 print(trainSet.vggIMatrix.shape)
 print(trainSet.qMatrix.shape)
 
-model.fit({'imInput': trainSet.vggIMatrix, 'langInput': trainSet.qMatrix, 'output': trainSet.aMatrix}, nb_epoch=20)
+from keras.callbacks import EarlyStopping
+early_stopping = EarlyStopping(monitor='val_loss', patience=5)
 
+
+hist = model.fit({'imInput': trainSet.vggIMatrix, 'langInput': trainSet.qMatrix, 'output': trainSet.aMatrix}, nb_epoch=360, show_accuracy=True, verbose=1, validation_split=0.1, callbacks=[early_stopping])
+#LANG ONLY MODEL
+#hist = model.fit({'langInput': trainSet.qMatrix, 'output': trainSet.aMatrix}, nb_epoch=360, show_accuracy=True, verbose=1, validation_split=0.1, callbacks=[early_stopping])
+
+print (hist.history)
 json_string = model.to_json()
 open('model.json', 'w').write(json_string)
 model.save_weights('test_weights.h5', overwrite=True)
