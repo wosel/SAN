@@ -124,16 +124,32 @@ model.compile(loss={'output': 'categorical_crossentropy'}, optimizer='sgd')
 Y = model.predict({'imInput': testSet.vggIMatrix, 'langInput':testSet.qMatrix})
 
 np.save('testResult.npy', Y['output'])
+
+
+
 '''
+
+print (np.max(np.sum(trainSet.aMatrix, axis=0))/3488)
 Youtput = np.load('testResult.npy')
+
+
+'''
 for i in range(10):
 
     print(Youtput[i, :])
-    print(testSet.questionList[i].question)
-    print(testSet.questionList[i].answer)
-    print(testSet.questionList[i].imageID)
-    print(testRevDict[np.argmax(Youtput[i])])
-    print(testRevDict[np.argmax(Youtput[i]) - 1])
-    print(testRevDict[np.argmax(Youtput[i]) + 1])
+    print(trainSet.questionList[i].question)
+    print(trainSet.questionList[i].imageID)
+    print(trainSet.questionList[i].answer)
+    print(np.argmax(trainSet.aMatrix[i, :]))
+    print(testRevDict[np.argmax(trainSet.aMatrix[i, :])])
+    print(np.argmax(Youtput[i, :]))
+    print(testRevDict[np.argmax(Youtput[i, :])])
+
+    #print(trainSet.aMatrix[i, :])
+    print(Youtput[i, np.argmax(trainSet.aMatrix[i, :])])
+    print(Youtput[i, np.argmax(Youtput[i, :])])
+    print(trainSet.aMatrix[i, :].shape)
+
     print("")
     print("")
+'''
