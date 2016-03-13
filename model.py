@@ -25,12 +25,15 @@ sys.setrecursionlimit(10000)
 # right now it loads the DAQUAR dataset, but is memory inefficient.
 # also a pairing of question <-> image is still missing
 
-if (len(sys.argv) < 2):
-    sys.exit("specify ini file of dataset as first argument")
+if (len(sys.argv) < 3):
+    sys.exit("usage: model.py [ini file] [trained weight file]")
 
 datasetIniFile = sys.argv[1]
 parser = ConfigParser()
 parser.read_file(open(datasetIniFile))
+
+outputFile = sys.argv[2]
+
 
 qFolder = parser.get('dataset', 'qFolder')
 qFullFile = parser.get('dataset', 'qFullFile')
@@ -136,7 +139,7 @@ hist = model.fit({'imInput': trainSet.vggIMatrix, 'langInput': trainSet.qMatrix,
 #hist = model.fit({'langInput': trainSet.qMatrix, 'output': trainSet.aMatrix}, nb_epoch=360, show_accuracy=True, verbose=1, validation_split=0.1, callbacks=[early_stopping])
 
 print (hist.history)
-json_string = model.to_json()
-open('model.json', 'w').write(json_string)
-model.save_weights('test_weights.h5', overwrite=True)
+#json_string = model.to_json()
+#open('model.json', 'w').write(json_string)
+model.save_weights(outputFile, overwrite=True)
 
