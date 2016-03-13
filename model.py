@@ -30,15 +30,15 @@ if (len(sys.argv) < 2):
 
 datasetIniFile = sys.argv[1]
 parser = ConfigParser()
-parser.readfp(open(datasetIniFile))
+parser.read_file(open(datasetIniFile))
 
 qFolder = parser.get('dataset', 'qFolder')
 qFullFile = parser.get('dataset', 'qFullFile')
 qTrainFile = parser.get('dataset', 'qTrainFile')
 qTestFile = parser.get('dataset', 'qTestFile')
 iFolder = parser.get('dataset', 'iFolder')
-iMatrix = parser.get('dataset', 'iMatrix')
-print(qFolder)
+iTrainMatrix = parser.get('dataset', 'iTrainMatrix')
+
 
 
 [images, trainSet, testSet, testRevDict] = \
@@ -59,7 +59,7 @@ print(qFolder)
 print("getting vgg repres")
 #trainSet.vggIMatrix = getRepresentation(trainSet.iMatrix)
 
-trainSet.vggIMatrix = np.load(iMatrix)
+trainSet.vggIMatrix = np.load(iTrainMatrix)
 
 #sys.exit("breakpoint")
 
