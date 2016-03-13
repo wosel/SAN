@@ -65,7 +65,7 @@ trainSet.vggIMatrix = np.load(iTrainMatrix)
 
 
 #m
-numRegions = 49
+numRegions = 196
 
 #d
 imageRepDimension = 512
