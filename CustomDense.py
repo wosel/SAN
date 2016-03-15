@@ -60,6 +60,7 @@ class CustomDense(Layer):
         self.W = self.init((self.output_dim[0], input_dim[0]))
 
         #self.b = K.zeros((self.output_dim,))
+        self.trainable_weights = [self.W]
 
         self.params = [self.W]
 
