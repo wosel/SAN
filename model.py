@@ -11,7 +11,7 @@ print(theano.config.device)
 
 from configparser import ConfigParser
 
-import data_loader
+import dataLoaderShortAnswer
 from CustomDense import CustomDense
 from CustomRepeatVector import CustomRepeatVector
 from vggRepresentation import getRepresentation
@@ -45,7 +45,7 @@ iTrainMatrix = parser.get('dataset', 'iTrainMatrix')
 
 
 [images, trainSet, testSet, testRevDict] = \
-    data_loader.load_both(
+    dataLoaderShortAnswer.load_both(
                           qFolder=qFolder,
                           qFullFile=qFullFile,
                           qTrainFile=qTrainFile,
