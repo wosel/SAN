@@ -98,16 +98,17 @@ model.add_node(CustomRepeatVector(numRegions), name='repeatedLangOutput', input=
 
 model.add_input(name='imInput', input_shape=(imageRepDimension, numRegions), dtype='float')
 model.add_node(CustomDense(output_dim=(LSTMDimension, numRegions)), name='imDense', input='imInput')
-
+model.add_node(Dropout(0.3), input='imDense', name='imDenseD')
 
 #combination of image and lstm in one layer of attention network
 #  hA, pI, vI~ and u correspond to paper. CustomDense is w_p from paper (bias unit missing atm)
 
-model.add_node(Activation('tanh'), inputs=['imDense', 'repeatedLangOutput'], merge_mode='sum', name='hA')
+model.add_node(Activation('tanh'), inputs=['imDenseD', 'repeatedLangOutput'], merge_mode='sum', name='hA')
 #LANG ONLY MODEL
 #model.add_node(Activation('tanh'), input='repeatedLangOutput', name='hA')
 model.add_node(CustomDense(output_dim=(1, numRegions)), input='hA', name='preActivationPI')
-model.add_node(Reshape(dims=(numRegions,)), input='preActivationPI', name='reshapedPAPI')
+model.add_node(Dropout(0.3), input='preActivationPI', name='preActivationPID')
+model.add_node(Reshape(dims=(numRegions,)), input='preActivationPID', name='reshapedPAPI')
 model.add_node(Activation('softmax'), input='reshapedPAPI', name='pI')
 model.add_node(Reshape(dims=(numRegions, 1)), input='pI', name='reshapedPI')
 
@@ -117,12 +118,13 @@ model.add_node(Activation('linear'), name='u', inputs=['reshapedVIT', 'lstm'], m
 #LANG ONLY MODEL
 #model.add_node(Activation('linear'), name='u', input='lstm')
 model.add_node(Dense(dictSize), name='Wu', input='u')
-model.add_node(Activation('softmax'), name='pans', input='Wu')
+model.add_node(Dropout(0.3), input='Wu', name='WuD')
+model.add_node(Activation('softmax'), name='pans', input='WuD')
 model.add_output(name='output', input='pans')
 
 print("compiling full model")
 
-sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+sgd = SGD(lr=0.001, decay=1e-6, momentum=0.95, nesterov=True, clipnorm=3.0)
 model.compile(loss={'output': 'categorical_crossentropy'}, optimizer=sgd)
 
 print("fit started")
@@ -131,7 +133,7 @@ print(trainSet.vggIMatrix.shape)
 print(trainSet.qMatrix.shape)
 
 from keras.callbacks import EarlyStopping
-early_stopping = EarlyStopping(monitor='val_loss', patience=5)
+early_stopping = EarlyStopping(monitor='val_loss', patience=25)
 
 
 hist = model.fit({'imInput': trainSet.vggIMatrix, 'langInput': trainSet.qMatrix, 'output': trainSet.aMatrix}, nb_epoch=360, show_accuracy=True, verbose=1, validation_split=0.1, callbacks=[early_stopping])
