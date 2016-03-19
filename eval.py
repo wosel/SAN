@@ -66,30 +66,34 @@ answers = np.sum(testSet.aMatrix, axis=0)
 #    if (a<0.1):
 #        print (testRevDict[a] + ": " + str(answers([a]))
 
-for i in range(10):
-
-    print(trainSet.questionList[i].question)
-    print(trainSet.questionList[i].answer)
-    print np.argmax(trainSet.aMatrix[i, :])
-    print testRevDict[np.argmax(trainSet.aMatrix[i, :])]
-    print (np.argmax(Y[i, :]))
-    print testRevDict[np.argmax(Y[i, :])]
-    print(Y[i, np.argmax(trainSet.aMatrix[i, :])])
-    print(Y[i, np.argmax(Y[i, :])])
-
-    print ("")
-    print ("")
+for i in range(Y.shape[0]):
+    
+    if (np.argmax(Y[i, :]) != 45):
+        print("qID: %d" % testSet.questionList[i].qID)
+        print("imageID: %d" % testSet.questionList[i].imageID)      
+        print(' '.join(testSet.questionList[i].question))
+        print("index of true answer: %d" % np.argmax(trainSet.aMatrix[i, :]))
+        print("true answer: " + testRevDict[np.argmax(testSet.aMatrix[i, :])])
+        print("index of output answer %d" % np.argmax(Y[i, :]))
+        print("model answer: " + testRevDict[np.argmax(Y[i, :])])
+        print("p of true answer: %.4f" % Y[i, np.argmax(testSet.aMatrix[i, :])])
+        print("p of model answer: %.4f" % Y[i, np.argmax(Y[i, :])])
+    
+        print ("")
+        print ("")
 
 outputA = np.zeros(Y.shape)
 for i in range(Y.shape[0]):
-	ansIdx = np.argmax(Y[i, :])
-	for j in range(Y.shape[1]):
-		if (j==ansIdx):
-			outputA[i, j] = 1.
-		else:
-			outputA[i, j] = 0.
+    ansIdx = np.argmax(Y[i, :])
+    for j in range(Y.shape[1]):
+        if (j==ansIdx):
+            outputA[i, j] = 1.
+        else:
+            outputA[i, j] = 0.
 
 outputS = np.sum(outputA, axis=0)
+print (outputS)
+
 print (outputS[45])
 
 
