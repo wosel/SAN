@@ -1,6 +1,6 @@
 #!/bin/bash
 
-while getopts "h?d:" opt; do
+while getopts "h?d:f:" opt; do
     case "$opt" in
     h|\?)
         echo "-d device"
@@ -8,6 +8,8 @@ while getopts "h?d:" opt; do
         ;;
     d)  device=$OPTARG
         ;;
+    f)  outputFile=$OPTARG
+		;;
     esac
 done
 
@@ -20,9 +22,9 @@ else
 	exit 1;
 fi
 
-TF="device=$device,optimizer=fast_compile"
+TF="device=$device,optimizer=fast_run,lib.cnmem=0.8"
 
 export THEANO_FLAGS=$TF
 
-python model.py daquar.mpi.ini
+python model.py daquar.mpi.ini $outputFile
 
