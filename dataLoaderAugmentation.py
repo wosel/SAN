@@ -239,15 +239,15 @@ def augment_data(trainSet, finalCount=10000):
     augmentedTrainSet.count = finalCount
     augmentedTrainSet.questionDictSize = trainSet.questionDictSize
     augmentedTrainSet.qLength = trainSet.qLength
-    augmentedTrainSet.questionDictSize = trainSet.answerDictSize
-    augmentedTrainSet.qLength = trainSet.aLength
+    augmentedTrainSet.answerDictSize = trainSet.answerDictSize
+    augmentedTrainSet.aLength = trainSet.aLength
 
     augmentedTrainSet.qMatrix = np.zeros((finalCount, trainSet.qLength))
     augmentedTrainSet.aMatrix = np.zeros((finalCount, trainSet.answerDictSize))
     augmentedTrainSet.iMatrix = np.zeros((finalCount, 3, 224, 224))
 
     for fq in range(finalCount):
-        q = finalIdxs[fq]
+        q = tmpList[finalIdxs[fq]]
         augmentedTrainSet.questionList.append(trainSet.questionList[q])
         augmentedTrainSet.qMatrix[fq, :] = trainSet.qMatrix[q, :]
         augmentedTrainSet.aMatrix[fq, :] = trainSet.aMatrix[q, :]
