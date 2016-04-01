@@ -11,12 +11,14 @@ print(theano.config.device)
 
 from configparser import ConfigParser
 
-import dataLoaderShortAnswer
+import dataLoaderAugmentation
 from CustomDense import CustomDense
 from CustomRepeatVector import CustomRepeatVector
-from vggRepresentation import getRepresentation
+from vggRepresentation import getRepresentation, getModel
 
 import numpy as np;
+
+np.random.seed(211)
 
 import sys
 sys.setrecursionlimit(10000)
@@ -41,11 +43,11 @@ qTrainFile = parser.get('dataset', 'qTrainFile')
 qTestFile = parser.get('dataset', 'qTestFile')
 iFolder = parser.get('dataset', 'iFolder')
 iTrainMatrix = parser.get('dataset', 'iTrainMatrix')
+VGGWeightsPath = parser.get('dataset', 'weights')
 
 
-
-[images, trainSet, testSet, testRevDict] = \
-    dataLoaderShortAnswer.load_both(
+[images, origTrainSet, testSet, testRevDict] = \
+    dataLoaderAugmentation.load_both(
                           qFolder=qFolder,
                           qFullFile=qFullFile,
                           qTrainFile=qTrainFile,
@@ -54,15 +56,26 @@ iTrainMatrix = parser.get('dataset', 'iTrainMatrix')
                           imLimit=-1,
                           qLimit=-1
                           )
+trainSet = dataLoaderAugmentation.augment_data(origTrainSet, 10000)
+
+#answerFreqs = np.sum(trainSet.aMatrix, axis=0)
+#print("original answers: \n", answerFreqs)
+#augmentedAnswerFreqs = np.sum(augmentedTrainSet.aMatrix, axis=0)
+#print("augmented answers: \n", augmentedAnswerFreqs)
+
+#sys.exit("breakpoint")
+
 
 #print(trainSet.qMatrix[3, :])
 #print(trainSet.iMatrix[1, :, :, :])
 #print(trainSet.iMatrix[127	, :, :, :])
 
 print("getting vgg repres")
-#trainSet.vggIMatrix = getRepresentation(trainSet.iMatrix)
 
-trainSet.vggIMatrix = np.load(iTrainMatrix)
+iModel = getModel(VGGWeightsPath)
+trainSet.vggIMatrix = getRepresentation(trainSet.iMatrix, iModel)
+
+#trainSet.vggIMatrix = np.load(iTrainMatrix)
 
 #sys.exit("breakpoint")
 
@@ -107,7 +120,7 @@ model.add_node(Dropout(0.3), input='imDense', name='imDenseD')
 model.add_node(Activation('relu'), inputs=['imDenseD', 'repeatedLangOutput'], merge_mode='sum', name='hA')
 #LANG ONLY MODEL
 #model.add_node(Activation('tanh'), input='repeatedLangOutput', name='hA')
-model.add_node(CustomDense(output_dim=(1, numRegions)), input='hA', name='preActivationPI')
+model.add_node(CustomDense(output_dim=(1, numRegions), bias=True), input='hA', name='preActivationPI')
 model.add_node(Dropout(0.3), input='preActivationPI', name='preActivationPID')
 model.add_node(Reshape(dims=(numRegions,)), input='preActivationPID', name='reshapedPAPI')
 model.add_node(Activation('softmax'), input='reshapedPAPI', name='pI')
@@ -115,7 +128,7 @@ model.add_node(Reshape(dims=(numRegions, 1)), input='pI', name='reshapedPI')
 
 model.add_node(Activation('linear'), inputs=['imInput', 'reshapedPI'], merge_mode='dot', dot_axes=([2], [1]), name='vITilde')
 model.add_node(Reshape(dims=(imageRepDimension,)), input='vITilde', name='reshapedVIT')
-model.add_node(Activation('linear'), name='u', inputs=['reshapedVIT', 'lstm'], merge_mode='sum')
+model.add_node(Activation('linear'), name='u', inputs=['reshapedVIT', 'lstmD'], merge_mode='sum')
 #LANG ONLY MODEL
 #model.add_node(Activation('linear'), name='u', input='lstm')
 model.add_node(Dense(answerDictSize), name='Wu', input='u')
@@ -134,10 +147,10 @@ print(trainSet.vggIMatrix.shape)
 print(trainSet.qMatrix.shape)
 
 from keras.callbacks import EarlyStopping
-early_stopping = EarlyStopping(monitor='val_loss', patience=25)
+early_stopping = EarlyStopping(monitor='val_loss', patience=1500)
 
 
-hist = model.fit({'imInput': trainSet.vggIMatrix, 'langInput': trainSet.qMatrix, 'output': trainSet.aMatrix}, nb_epoch=360, show_accuracy=True, verbose=1, validation_split=0.1, callbacks=[early_stopping])
+hist = model.fit({'imInput': trainSet.vggIMatrix, 'langInput': trainSet.qMatrix, 'output': trainSet.aMatrix}, nb_epoch=1500, show_accuracy=True, verbose=1, validation_split=0.1, callbacks=[early_stopping], shuffle=True)
 #LANG ONLY MODEL
 #hist = model.fit({'langInput': trainSet.qMatrix, 'output': trainSet.aMatrix}, nb_epoch=360, show_accuracy=True, verbose=1, validation_split=0.1, callbacks=[early_stopping])
 
