@@ -32,12 +32,13 @@ class CustomDense(Layer):
     '''
     input_ndim = 3
 
-    def __init__(self, output_dim, init='glorot_uniform', activation='linear', weights=None,
+    def __init__(self, output_dim, bias=False, init='glorot_uniform', activation='linear', weights=None,
                  W_regularizer=None, b_regularizer=None, activity_regularizer=None,
                  W_constraint=None, b_constraint=None, input_dim=None, **kwargs):
         self.init = initializations.get(init)
         self.activation = activations.get(activation)
         self.output_dim = output_dim
+        self.has_bias = bias
 
         self.W_regularizer = regularizers.get(W_regularizer)
         #self.b_regularizer = regularizers.get(b_regularizer)
@@ -59,10 +60,15 @@ class CustomDense(Layer):
         input_dim = (self.input_shape[1], self.input_shape[2])
         self.W = self.init((self.output_dim[0], input_dim[0]))
 
-        #self.b = K.zeros((self.output_dim,))
-        self.trainable_weights = [self.W]
+        self.b = K.zeros((self.output_dim[0], self.output_dim[1]))
 
-        self.params = [self.W]
+        if self.has_bias:
+            print("training bias unit as well")
+            self.trainable_weights = [self.W, self.b]
+            self.params = [self.W, self.b]
+        else:
+            self.trainable_weights = [self.W]
+            self.params = [self.W]
 
         self.regularizers = []
         if self.W_regularizer:
@@ -88,7 +94,7 @@ class CustomDense(Layer):
     def get_output(self, train=False):
         X = self.get_input(train)
 
-        output = self.activation(K.dot(X.dimshuffle(0, 2, 1), self.W.dimshuffle(1, 0)).dimshuffle(0, 2, 1))
+        output = self.activation(K.dot(X.dimshuffle(0, 2, 1), self.W.dimshuffle(1, 0)).dimshuffle(0, 2, 1) + self.b)
         return output
 
     def get_config(self):
