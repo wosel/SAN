@@ -66,7 +66,11 @@ answers = np.sum(testSet.aMatrix, axis=0)
 #    if (a<0.1):
 #        print (testRevDict[a] + ": " + str(answers([a]))
 
+errors = 0;
+
 for i in range(Y.shape[0]):
+    if (np.argmax(Y[i, :]) != np.argmax(testSet.aMatrix[i, :])):
+        errors += 1
     
     if (np.argmax(Y[i, :]) != 45):
         print("qID: %d" % testSet.questionList[i].qID)
@@ -102,7 +106,9 @@ print (answers)
 print (answers[45])
 
 
+acc = 1. - (errors/Y.shape[0])
 
+print ("accuracy: {0:.5f}".format(acc))
 
 
 
