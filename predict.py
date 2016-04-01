@@ -108,7 +108,7 @@ model.add_node(Dropout(0.3), input='imDense', name='imDenseD')
 model.add_node(Activation('relu'), inputs=['imDenseD', 'repeatedLangOutput'], merge_mode='sum', name='hA')
 #LANG ONLY MODEL
 #model.add_node(Activation('tanh'), input='repeatedLangOutput', name='hA')
-model.add_node(CustomDense(output_dim=(1, numRegions)), input='hA', name='preActivationPI')
+model.add_node(CustomDense(output_dim=(1, numRegions), bias=True), input='hA', name='preActivationPI')
 model.add_node(Dropout(0.3), input='preActivationPI', name='preActivationPID')
 model.add_node(Reshape(dims=(numRegions,)), input='preActivationPID', name='reshapedPAPI')
 model.add_node(Activation('softmax'), input='reshapedPAPI', name='pI')
@@ -116,13 +116,14 @@ model.add_node(Reshape(dims=(numRegions, 1)), input='pI', name='reshapedPI')
 
 model.add_node(Activation('linear'), inputs=['imInput', 'reshapedPI'], merge_mode='dot', dot_axes=([2], [1]), name='vITilde')
 model.add_node(Reshape(dims=(imageRepDimension,)), input='vITilde', name='reshapedVIT')
-model.add_node(Activation('linear'), name='u', inputs=['reshapedVIT', 'lstm'], merge_mode='sum')
+model.add_node(Activation('linear'), name='u', inputs=['reshapedVIT', 'lstmD'], merge_mode='sum')
 #LANG ONLY MODEL
 #model.add_node(Activation('linear'), name='u', input='lstm')
 model.add_node(Dense(answerDictSize), name='Wu', input='u')
 model.add_node(Dropout(0.3), input='Wu', name='WuD')
 model.add_node(Activation('softmax'), name='pans', input='WuD')
 model.add_output(name='output', input='pans')
+
 
 print("compiling full model")
 
