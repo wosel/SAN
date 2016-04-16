@@ -136,21 +136,24 @@ from keras.layers import Dense, Dropout, Embedding, LSTM, Activation, Merge
  Simple model using global image features
     - embedding and lstm layer on text input
     - dense layer on image input
-    - sum of the inputs -> softmax -> output
+    - concat of the inputs -> softmax -> output
     
 '''
+EMBED_DIM = 512
+LSTM_DIM = 512
+
 model = keras.models.Graph()
 model.add_input(name='langInput', input_shape=(MAXLEN,), dtype='int')
-model.add_node(Embedding(input_dim=len(word2index_x), input_length=MAXLEN, output_dim=512), input='langInput', name='langEmbedding')
-model.add_node(LSTM(output_dim=512, activation='sigmoid', inner_activation='hard_sigmoid'), input='langEmbedding', name='langLSTM')
+model.add_node(Embedding(input_dim=len(word2index_x), input_length=MAXLEN, output_dim=EMBED_DIM), input='langInput', name='langEmbedding')
+model.add_node(LSTM(output_dim=LSTM_DIM, activation='sigmoid', inner_activation='hard_sigmoid'), input='langEmbedding', name='langLSTM')
 model.add_node(Dropout(0.5), input='langLSTM', name='langDropout')
 
 model.add_input(name='imInput', input_shape=(train_visual_features.shape[1],))
-model.add_node(Dense(output_dim=512), input='imInput', name='imDense')
+model.add_node(Dense(output_dim=LSTM_DIM), input='imInput', name='imDense')
 model.add_node(Dropout(0.5), input='imDense', name='imDropout')
 #model.add_node(Activation(activation='tanh'), input='imDropout', name='imActivation')
 
-model.add_node(Activation(activation='linear'), inputs=['langDropout','imDropout'], merge_mode='sum', name='merged')
+model.add_node(Activation(activation='linear'), inputs=['langDropout','imDropout'], merge_mode='concat', name='merged')
 model.add_node(Dense(output_dim=len(word2index_y)), input='merged', name='mergeDense')
 model.add_node(Activation(activation='softmax'), input='mergeDense', name='softmax')
 model.add_output(name='output', input='softmax')
@@ -180,14 +183,14 @@ model.fit(  {'imInput': train_visual_features, 'langInput': train_x, 'output': t
  Simple accuracy testing
 
 '''
-testOutputtmp = model.predict({'imInput': test_visual_features, 'langInput': test_x})
-testOutput = testOutput['output']
+testOutputTmp = model.predict({'imInput': test_visual_features, 'langInput': test_x})
+testOutput = testOutputTmp['output']
 
 
 import numpy as np
 
 errors = 0
-for i in range(testY.shape[0]):
+for i in range(testOutput.shape[0]):
     trueAnswerIdx = np.argmax(test_y[i, :])
     modelAnswerIdx = np.argmax(testOutput[i, :])
     if (trueAnswerIdx != modelAnswerIdx):
