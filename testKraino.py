@@ -81,6 +81,8 @@ test_y, _ = encode_answers_one_hot(
 print(test_x.shape)
 print(test_y.shape)
 
+CNN_NAME='vgg_net'
+PERCEPTION_LAYER='fc7'
 test_image_names = test_text_representation['img_name']
 
 test_visual_features = dp['perception'](
@@ -129,6 +131,14 @@ import keras
 from keras.models import Graph
 from keras.layers import Dense, Dropout, Embedding, LSTM, Activation, Merge
 
+'''
+
+ Simple model using global image features
+    - embedding and lstm layer on text input
+    - dense layer on image input
+    - sum of the inputs -> softmax -> output
+    
+'''
 model = keras.models.Graph()
 model.add_input(name='langInput', input_shape=(MAXLEN,), dtype='int')
 model.add_node(Embedding(input_dim=len(word2index_x), input_length=MAXLEN, output_dim=512), input='langInput', name='langEmbedding')
@@ -138,9 +148,9 @@ model.add_node(Dropout(0.5), input='langLSTM', name='langDropout')
 model.add_input(name='imInput', input_shape=(train_visual_features.shape[1],))
 model.add_node(Dense(output_dim=512), input='imInput', name='imDense')
 model.add_node(Dropout(0.5), input='imDense', name='imDropout')
-model.add_node(Activation(activation='tanh'), input='imDropout', name='imActivation')
+#model.add_node(Activation(activation='tanh'), input='imDropout', name='imActivation')
 
-model.add_node(Activation(activation='linear'), inputs=['langDropout','imActivation'], merge_mode='sum', name='merged')
+model.add_node(Activation(activation='linear'), inputs=['langDropout','imDropout'], merge_mode='sum', name='merged')
 model.add_node(Dense(output_dim=len(word2index_y)), input='merged', name='mergeDense')
 model.add_node(Activation(activation='softmax'), input='mergeDense', name='softmax')
 model.add_output(name='output', input='softmax')
@@ -157,7 +167,7 @@ early_stopping = EarlyStopping(monitor='val_loss', patience=100)
 train_input = [train_x, train_visual_features]
 print(model.__class__)
 model.fit(  {'imInput': train_visual_features, 'langInput': train_x, 'output': train_y},
-            nb_epoch=100,
+            nb_epoch=50,
             verbose=1,
             batch_size=512,
             validation_split=0.1,
@@ -165,12 +175,13 @@ model.fit(  {'imInput': train_visual_features, 'langInput': train_x, 'output': t
             callbacks=[early_stopping])
 
 
-testYtmp = model.predict({'imInput': test_visual_features, 'langInput': test_x})
 
-testY = testYtmp['output']
+'''
+ Simple accuracy testing
 
-print testY.shape
-print test_y.shape
+'''
+testOutputtmp = model.predict({'imInput': test_visual_features, 'langInput': test_x})
+testOutput = testOutput['output']
 
 
 import numpy as np
@@ -178,11 +189,11 @@ import numpy as np
 errors = 0
 for i in range(testY.shape[0]):
     trueAnswerIdx = np.argmax(test_y[i, :])
-    modelAnswerIdx = np.argmax(testY[i, :])
+    modelAnswerIdx = np.argmax(testOutput[i, :])
     if (trueAnswerIdx != modelAnswerIdx):
         errors += 1 
 
 
-accuracy = 1. - (float(errors)/testY.shape[0])
+accuracy = 1. - (float(errors)/testOutput.shape[0])
 
 print(accuracy)
